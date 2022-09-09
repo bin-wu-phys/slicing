@@ -1,5 +1,6 @@
 #include "SampleAnalyzer/User/Analyzer/qT.h"
 #include "TCanvas.h"
+#include "TMath.h"
 using namespace MA5;
 using namespace std;
 
@@ -13,13 +14,15 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   // Initializing PhysicsService for MC
   PHYSICS->mcConfig().Reset();
 
-
+  //set parameters
+  _R = 0.4;
+  
   // Initializing histograms
-  _histDphi = new TH1F("#Delta#phi", "#Delta#phi", 50, 20.0, 200.0);
+  _histDphi = new TH1F("#Delta#phi", "#Delta#phi_{12}", 50, 0.0, TMath::Pi());
   _histDphi->GetXaxis()->SetTitle("#Delta#phi");
   _histDphi->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
   
-  _histqT = new TH1F("q_{T}", "q_{T}", 50, 20.0, 200.0);
+  _histqT = new TH1F("q_{T}", "#Delta#phi_{23}", 50, 0.0, TMath::Pi());
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
   _histqT->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
 
@@ -44,13 +47,13 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   //_histDphi->SetFillColor(kRed);
   c1->SetLeftMargin(0.14);
   _histDphi->Draw("HIST");
-  c1->SaveAs("Dphi.pdf");
+  c1->SaveAs("Dphi12.pdf");
 
   TCanvas* c2 = new TCanvas("c2","q_{T}", 500, 700);
   c2->SetLeftMargin(0.14);
   _histDphi->SetFillColor(kRed);
   _histqT->Draw("HIST");
-  c2->SaveAs("qT.pdf");  
+  c2->SaveAs("Dphi23.pdf");  
   cout << "END   Finalization" << endl;
 }
 
@@ -75,8 +78,15 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     //Sort the pT
     int idx[3];
     SortpT(Js, idx);
-    _histDphi->Fill(Js[idx[0]]->pt());
-    _histqT->Fill(Js[idx[2]]->pt());
+    _histDphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
+    _histqT->Fill(DeltaPhi(Js[idx[1]], Js[idx[2]]));
+    /*
+    if(InJetQ(Js[idx[1]], Js[idx[1]])){
+    }else{
+      _histDphi->Fill(Js[idx[0]]->pt());
+      _histqT->Fill(Js[idx[2]]->pt());
+    }
+    */
   }
   
   return true;
@@ -113,3 +123,25 @@ double qT::PTVecSum(const MCParticleFormat* p1, const MCParticleFormat* p2){
   double dpx = p1->px()+p2->px(), dpy = p1->py()+p2->py();
   return sqrt(dpx*dpx + dpy*dpy);
 }
+
+double qT::qTInJet(double p1, double p2, double p3){
+  return sqrt((p1+p2+p3)*(p2+p3-p1)*p3/p2);
+}
+
+double qT::DeltaPhi(const MCParticleFormat* p1, const MCParticleFormat* p2){
+  /*Because phi() in [-pi, pi], dphi in [-2pi, 2pi].
+    We further constrain it to [0, pi], corresponding to DPHI_0_PI.
+  */
+  double dphi = fabs(p1->phi() - p2->phi());
+  if(dphi>TMath::Pi()){
+    dphi = 2.0*TMath::Pi() - dphi;
+  }
+  return dphi;
+}
+
+bool qT::InJetQ(const MCParticleFormat* p2, const MCParticleFormat* p3){
+  bool Q = false;
+  if(DeltaR(p2, p3) < _R) Q = true;
+  return Q;
+}
+
