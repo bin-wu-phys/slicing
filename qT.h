@@ -22,6 +22,8 @@ class qT : public AnalyzerBase
   double PTVecSum(const MCParticleFormat*, const MCParticleFormat*);//the modulus of the total pT of two particles
 
   double qTInJet(double, double, double);//In jet qT
+
+  bool selectQ(double pJ, double etaJ);//test selected kinetics.
   
  private:
   double _R; //jet radius

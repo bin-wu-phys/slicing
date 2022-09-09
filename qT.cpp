@@ -22,7 +22,7 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   _histDphi->GetXaxis()->SetTitle("#Delta#phi");
   _histDphi->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
   
-  _histqT = new TH1F("q_{T}", "#Delta#phi_{23}", 50, 0.0, TMath::Pi());
+  _histqT = new TH1F("q_{T}", "q_{T}", 50, 0.0, 50);
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
   _histqT->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
 
@@ -47,13 +47,13 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   //_histDphi->SetFillColor(kRed);
   c1->SetLeftMargin(0.14);
   _histDphi->Draw("HIST");
-  c1->SaveAs("Dphi12.pdf");
+  c1->SaveAs("Dphi.pdf");
 
   TCanvas* c2 = new TCanvas("c2","q_{T}", 500, 700);
   c2->SetLeftMargin(0.14);
-  _histDphi->SetFillColor(kRed);
+  //_histDphi->SetFillColor(kRed);
   _histqT->Draw("HIST");
-  c2->SaveAs("Dphi23.pdf");  
+  c2->SaveAs("qT.pdf");  
   cout << "END   Finalization" << endl;
 }
 
@@ -78,15 +78,18 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     //Sort the pT
     int idx[3];
     SortpT(Js, idx);
-    _histDphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
-    _histqT->Fill(DeltaPhi(Js[idx[1]], Js[idx[2]]));
-    /*
-    if(InJetQ(Js[idx[1]], Js[idx[1]])){
+
+    double pJ, etaJ, qT;
+    if(InJetQ(Js[idx[1]], Js[idx[2]])){
+      pJ = Js[idx[1]]->pt() + Js[idx[2]]->pt();
+      etaJ = Js[idx[1]]->eta(); qT = qTInJet(Js[idx[0]]->pt(), Js[idx[1]]->pt(), Js[idx[2]]->pt());
     }else{
-      _histDphi->Fill(Js[idx[0]]->pt());
-      _histqT->Fill(Js[idx[2]]->pt());
+      pJ = Js[idx[0]]->pt(); etaJ = Js[idx[0]]->eta(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
     }
-    */
+    if(selectQ(pJ, etaJ)){
+      _histDphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      _histqT->Fill(qT);
+    }
   }
   
   return true;
@@ -145,3 +148,7 @@ bool qT::InJetQ(const MCParticleFormat* p2, const MCParticleFormat* p3){
   return Q;
 }
 
+bool qT::selectQ(double pJ, double etaJ){
+  bool Q = true;
+  return Q;
+}
