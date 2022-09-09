@@ -82,26 +82,6 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
   return true;
 }
 
-void qT::SortpT(const MCParticleFormat** Js){
-  int iMin=0, iMax=0;
-  double pMin = Js[0]->pt(), pMax = Js[0]->pt();
-  for(int i=1;i<3;i++){
-    if(Js[i]->pt() < pMin){
-      iMin = i; pMin = Js[i]->pt();
-    }else if(Js[i]->pt() > pMax){
-      iMax = i; pMax = Js[i]->pt();
-    }
-  }
-
-  if(iMax!=iMin){
-    const MCParticleFormat *j1 = Js[iMax], *j2, *j3 = Js[iMin];
-    for(int i=0;i<3;i++){
-      if((i!=iMax)&&(i!=iMin)) j2 = Js[i];
-    }
-    Js[0] = j1; Js[1] = j2; Js[2] = j3;
-  }
-}
-
 void qT::SortpT(const MCParticleFormat** Js, int *idx){
   int iMin=0, iMax=0;
   double pMin = Js[0]->pt(), pMax = Js[0]->pt();
@@ -122,4 +102,14 @@ void qT::SortpT(const MCParticleFormat** Js, int *idx){
     for(int i=0;i<3;i++)
       idx[i] = i;
   }
+}
+
+double qT::DeltaR(const MCParticleFormat* p1, const MCParticleFormat* p2){
+  double deta = p1->eta()-p2->eta(), dphi = p1->phi()-p2->phi();
+  return sqrt(deta*deta + dphi*dphi);
+}
+
+double qT::PTVecSum(const MCParticleFormat* p1, const MCParticleFormat* p2){
+  double dpx = p1->px()+p2->px(), dpy = p1->py()+p2->py();
+  return sqrt(dpx*dpx + dpy*dpy);
 }

@@ -15,11 +15,13 @@ class qT : public AnalyzerBase
   virtual void Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& files);
   virtual bool Execute(SampleFormat& sample, const EventFormat& event);
 
+  double DeltaR(const MCParticleFormat*, const MCParticleFormat*);//distance of two particles in (phi, eta)
+  double PTVecSum(const MCParticleFormat*, const MCParticleFormat*);//the modulus of the total pT of two particles
+  
  private:
   TH1F *_histDphi;//Delta phi histogram
   TH1F *_histqT;//qT histogram
 
-  void SortpT(const MCParticleFormat**);
   void SortpT(const MCParticleFormat**, int *idx);
 };
 }
