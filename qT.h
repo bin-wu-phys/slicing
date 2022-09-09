@@ -18,9 +18,10 @@ class qT : public AnalyzerBase
  private:
   TH1F *_histDphi;//Delta phi histogram
   TH1F *_histqT;//qT histogram
+  TH1F *_histp2;//p2 histogram
 
-  void SortpT(const MCParticleFormat**);
-  void SortpT(const MCParticleFormat**, int *idx);
+  void SortpT(const MCParticleFormat**);//Sort js by their pTs
+  void SortpT(const MCParticleFormat**, int *idx);//Get indices of sorted js by pTs
 };
 }
 
