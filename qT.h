@@ -24,12 +24,18 @@ class qT : public AnalyzerBase
   double qTInJet(double, double, double);//In jet qT
 
   bool selectQ(double pJ, double etaJ);//test selected kinetics.
+
+  void setParas(double, double, double);//set parameters _R, _etaMax, _pTJMin
   
  private:
+  //parameters
   double _R; //jet radius
+  double _etaMax;//maximum pseudorapidity
+  double _pTJMin;//lower jet pT cut
   
   TH1F *_histDphi;//Delta phi histogram
   TH1F *_histqT;//qT histogram
+  TH1F *_histqTSJA;//qT histogram in SJA
 
   void SortpT(const MCParticleFormat**, int *idx);
 

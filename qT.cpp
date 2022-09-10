@@ -1,6 +1,7 @@
 #include "SampleAnalyzer/User/Analyzer/qT.h"
 #include "TCanvas.h"
 #include "TMath.h"
+#include "ResNormal.h"
 using namespace MA5;
 using namespace std;
 
@@ -15,16 +16,23 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   PHYSICS->mcConfig().Reset();
 
   //set parameters
-  _R = 0.4;
+  setParas(0.4, 2.0, 50.0);
   
   // Initializing histograms
-  _histDphi = new TH1F("#Delta#phi", "#Delta#phi_{12}", 50, 0.0, TMath::Pi());
+  _histDphi = new TH1F("#Delta#phi", "#Delta#phi_{12}", 50, 2.0, TMath::Pi());
+  _histDphi->SetStats(kFALSE);
   _histDphi->GetXaxis()->SetTitle("#Delta#phi");
   _histDphi->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
   
-  _histqT = new TH1F("q_{T}", "q_{T}", 50, 0.0, 50);
+  _histqT = new TH1F("q_{T}", "q_{T} in WTA", 50, 0.0, 50);
+  _histqT->SetStats(kFALSE);
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
   _histqT->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
+
+  _histqTSJA = new TH1F("q_{T}", "q_{T} in SJA", 50, 0.0, 50);
+  _histqTSJA->SetStats(kFALSE);
+  _histqTSJA->GetXaxis()->SetTitle("q_{T}[GeV]");
+  _histqTSJA->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
 
   cout << "END   Initialization" << endl;
   return true;
@@ -40,13 +48,17 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   // Normalization of the histogram: L = 10 fb-1
   double nrm = summary.mc()->xsection() * 10000. /
     static_cast<float>(summary.nevents());
-  _histDphi->Scale(nrm); _histqT->Scale(nrm);
+  _histDphi->Scale(nrm); _histqT->Scale(nrm); _histqTSJA->Scale(nrm);
   
   //Output
   TCanvas* c1 = new TCanvas("c1","#Delta#phi", 500, 700);
   //_histDphi->SetFillColor(kRed);
+  TH1F* S1_DPHI_0_PI_0 = new TH1F("S1_DPHI_0_PI_0","S1_DPHI_0_PI_0",50,2.0,3.141593);
+  DphiNormal(S1_DPHI_0_PI_0);
+  
   c1->SetLeftMargin(0.14);
   _histDphi->Draw("HIST");
+  S1_DPHI_0_PI_0->Draw("SAME");
   c1->SaveAs("Dphi.pdf");
 
   TCanvas* c2 = new TCanvas("c2","q_{T}", 500, 700);
@@ -54,6 +66,17 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   //_histDphi->SetFillColor(kRed);
   _histqT->Draw("HIST");
   c2->SaveAs("qT.pdf");  
+
+  TCanvas* c3 = new TCanvas("c3","q_{T} in SJA", 500, 700);
+  TH1F* S2_PT_0 = new TH1F("S2_PT_0","S2_PT_0",50,0.0,50.0);
+  qTNormal(S2_PT_0);
+  
+  c3->SetLeftMargin(0.14);
+  //_histDphi->SetFillColor(kRed);
+  _histqTSJA->Draw("HIST");
+  S2_PT_0->Draw("SAME");
+  c3->SaveAs("qTSJA.pdf");  
+  
   cout << "END   Finalization" << endl;
 }
 
@@ -86,9 +109,10 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }else{
       pJ = Js[idx[0]]->pt(); etaJ = Js[idx[0]]->eta(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
     }
+   
     if(selectQ(pJ, etaJ)){
       _histDphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
-      _histqT->Fill(qT);
+      _histqT->Fill(qT); _histqTSJA->Fill(PTVecSum(Js[idx[0]], Js[idx[1]]));
     }
   }
   
@@ -149,6 +173,14 @@ bool qT::InJetQ(const MCParticleFormat* p2, const MCParticleFormat* p3){
 }
 
 bool qT::selectQ(double pJ, double etaJ){
-  bool Q = true;
+  bool Q = false;
+  
+  if((pJ > _pTJMin)&&(etaJ > -_etaMax)&&(etaJ < _etaMax)) Q = true;
+  
   return Q;
 }
+
+void qT::setParas(double R, double etaMax, double pTJMin){
+  _R = R; _etaMax = etaMax; _pTJMin = pTJMin;
+}
+
