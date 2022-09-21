@@ -38,6 +38,8 @@ class qT : public AnalyzerBase
 
   void dsdqT(const SampleFormat& summary);//output dsigma/dq_T
   void sigma(const SampleFormat& summary);//output \int d q_T dsigma/dq_T
+  void sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel);//output \int d q_T dsigma/dq_T
+
   
  private:
   //Luminosity

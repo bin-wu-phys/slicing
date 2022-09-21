@@ -28,9 +28,9 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   setLumi(1e4);
   
   // Initializing histograms
-  _histDphi = new TH1F("#Delta#phi", "#Delta#phi_{12}", 50, 2.0, TMath::Pi());
+  _histDphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 0.0, TMath::Pi());//change to small delta phi
   _histDphi->SetStats(kFALSE);
-  _histDphi->GetXaxis()->SetTitle("#Delta#phi");
+  _histDphi->GetXaxis()->SetTitle("#delta#phi");
   
   _histqT = new TH1F("q_{T}", "q_{T} in WTA", 50, 5.0, 100);
   _histqT->SetStats(kFALSE);
@@ -135,7 +135,30 @@ void qT::sigma(const SampleFormat& summary){
   //c->SetLogy(1);
   c->SaveAs("sigma.pdf");
 }
- 
+
+void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel){
+  double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents()));
+  
+  //check the total number
+  int numBin = hist->GetNbinsX()+1;
+  TGraph g;
+
+  double sig = nrm*hist->GetBinContent(numBin);
+  for(int i=hist->GetNbinsX(); i>0; i--){//constrained to [1, GetNbinsX()]
+    sig += nrm*hist->GetBinContent(i);
+    g.AddPoint(hist->GetBinCenter(i), sig);
+    //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
+  }
+  TCanvas* c = new TCanvas("c","#sigma", 500, 700);
+  c->SetLeftMargin(0.14);
+  //_histDphi->SetFillColor(kRed);
+  g.Draw();
+  g.GetYaxis()->SetTitle(ylabel);
+  g.GetXaxis()->SetTitle(xlabel);
+  //c->SetLogy(1);
+  c->SaveAs(fname);
+}
+
 void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& files)
 {
   cout << "BEGIN Finalization" << endl;
@@ -147,7 +170,8 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   dsdqT(summary);
 
   //output sigma(q_T)
-  sigma(summary);
+  sigma(summary, _histDphi, "sigmaDphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
+  sigma(summary, _histqT, "sigmaqT.pdf", "q_{T}[GeV]", "#sigma(q_{T})[pb]");
   
   //printSummary(summary);
   cout << "END   Finalization" << endl;
@@ -184,7 +208,7 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }
    
     if(selectQ(pJ, etaJ)){
-      _histDphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      _histDphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
       _histqT->Fill(qT); _histqTSJA->Fill(PTVecSum(Js[idx[0]], Js[idx[1]]));
     }
   }
