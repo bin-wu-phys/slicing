@@ -37,7 +37,6 @@ class qT : public AnalyzerBase
   void cmpWithNorm(const SampleFormat& summary);//compare with the results of the normal mode.
 
   void dsdqT(const SampleFormat& summary);//output dsigma/dq_T
-  void sigma(const SampleFormat& summary);//output \int d q_T dsigma/dq_T
   void sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel);//output \int d q_T dsigma/dq_T
 
   
@@ -54,9 +53,8 @@ class qT : public AnalyzerBase
   bool _initPartonsQ;//pick a pair of initial partons?
   int _iA, _iB;//PDG id for the two initial partons
   
-  TH1F *_histDphi;//Delta phi histogram
+  TH1F *_histdphi;//Delta phi histogram
   TH1F *_histqT;//qT histogram
-  TH1F *_histqTSJA;//qT histogram in SJA
 
   void SortpT(const MCParticleFormat**, int *idx);
 

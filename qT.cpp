@@ -28,17 +28,13 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   setLumi(1e4);
   
   // Initializing histograms
-  _histDphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 0.0, TMath::Pi());//change to small delta phi
-  _histDphi->SetStats(kFALSE);
-  _histDphi->GetXaxis()->SetTitle("#delta#phi");
+  _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 0.0, TMath::Pi());//change to small delta phi
+  _histdphi->SetStats(kFALSE);
+  _histdphi->GetXaxis()->SetTitle("#delta#phi");
   
   _histqT = new TH1F("q_{T}", "q_{T} in WTA", 50, 5.0, 100);
   _histqT->SetStats(kFALSE);
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
-
-  _histqTSJA = new TH1F("q_{T}", "q_{T} in SJA", 50, 0.0, 50);
-  _histqTSJA->SetStats(kFALSE);
-  _histqTSJA->GetXaxis()->SetTitle("q_{T}[GeV]");
 
   cout << "END   Initialization" << endl;
   return true;
@@ -60,30 +56,32 @@ void qT::printSummary(const SampleFormat& summary){
 void qT::cmpWithNorm(const SampleFormat& summary){
   //scale the number corresponding to _L
   double nrm = summary.mc()->xsection() * _L /static_cast<float>(summary.nevents());
-  _histDphi->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
-  _histqTSJA->GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
-  _histDphi->Scale(nrm); _histqTSJA->Scale(nrm);
 
+  TGraph g;
+
+  TH1F* S1_DPHI_0_PI_0 = new TH1F("S1_DPHI_0_PI_0","S1_DPHI_0_PI_0",50,0.0,3.141593);
+  DphiNormal(S1_DPHI_0_PI_0);
+
+  for(int i=1; i<=_histdphi->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    double Dp = TMath::Pi()-_histdphi->GetBinCenter(i);
+    double Dn = nrm*_histdphi->GetBinContent(i)-S1_DPHI_0_PI_0->GetBinContent(_histdphi->GetNbinsX()+1-i);
+    g.AddPoint(Dp, Dn);
+    cout << Dp << " " << nrm*_histdphi->GetBinContent(i) << " " <<  Dn;
+    if(_histdphi->GetBinContent(i)!=0.0)
+      cout << " " << Dn/(nrm*_histdphi->GetBinContent(i));
+    cout << endl;
+  }
+  
+  g.GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
+  g.GetXaxis()->SetTitle("#Delta#phi");
+  
   //Output
   TCanvas* c1 = new TCanvas("c1","#Delta#phi", 500, 700);
-  //_histDphi->SetFillColor(kRed);
-  TH1F* S1_DPHI_0_PI_0 = new TH1F("S1_DPHI_0_PI_0","S1_DPHI_0_PI_0",50,2.0,3.141593);
-  DphiNormal(S1_DPHI_0_PI_0);
   
   c1->SetLeftMargin(0.14);
-  _histDphi->Draw("HIST");
-  S1_DPHI_0_PI_0->Draw("SAME");
+  g.Draw("AP");
   c1->SaveAs("Dphi.pdf");
 
-  TCanvas* c3 = new TCanvas("c3","q_{T} in SJA", 500, 700);
-  TH1F* S2_PT_0 = new TH1F("S2_PT_0","S2_PT_0",50,0.0,50.0);
-  qTNormal(S2_PT_0);
-  
-  c3->SetLeftMargin(0.14);
-  //_histDphi->SetFillColor(kRed);
-  _histqTSJA->Draw("HIST");
-  S2_PT_0->Draw("SAME");
-  c3->SaveAs("qTSJA.pdf");  
 }
 
 void qT::dsdqT(const SampleFormat& summary){
@@ -103,39 +101,6 @@ void qT::dsdqT(const SampleFormat& summary){
   c->SaveAs("qT.pdf");
 }
 
-void qT::sigma(const SampleFormat& summary){
-  double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents()));
-  
-  //check the total number
-  int numBin = _histqT->GetNbinsX()+1;
-  /*
-  //check the total number of events
-  int num = 0;
-  for(int i=numBin; i>=0; i--){
-    num+=_histqT->GetBinContent(i);
-    cout << _histqT->GetBinCenter(i) << ": " << _histqT->GetBinContent(i) << " num: " << num << endl;
-  }
-  cout << "The total number: " << summary.nevents() << " with diff ";
-  cout << num-static_cast<int>(summary.nevents()) << endl;
-  */
-  TGraph g;
-
-  double sig = nrm*_histqT->GetBinContent(numBin);
-  for(int i=_histqT->GetNbinsX(); i>0; i--){//constrained to [1, GetNbinsX()]
-    sig += nrm*_histqT->GetBinContent(i);
-    g.AddPoint(_histqT->GetBinCenter(i), sig);
-    //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
-  }
-  TCanvas* c = new TCanvas("c","q_{T}", 500, 700);
-  c->SetLeftMargin(0.14);
-  //_histDphi->SetFillColor(kRed);
-  g.Draw();
-  g.GetYaxis()->SetTitle("#sigma(q_{T})[pb]");
-  g.GetXaxis()->SetTitle("q_{T}[GeV]");
-  //c->SetLogy(1);
-  c->SaveAs("sigma.pdf");
-}
-
 void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel){
   double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents()));
   
@@ -149,7 +114,7 @@ void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const
     g.AddPoint(hist->GetBinCenter(i), sig);
     //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
   }
-  TCanvas* c = new TCanvas("c","#sigma", 500, 700);
+  TCanvas* c = new TCanvas("","#sigma", 500, 700);
   c->SetLeftMargin(0.14);
   //_histDphi->SetFillColor(kRed);
   g.Draw();
@@ -164,13 +129,13 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   cout << "BEGIN Finalization" << endl;
 
   //compared with the normal mode
-  //cmpWithNorm(summary);
+  cmpWithNorm(summary);
 
   //output dsigma/dq_T
   dsdqT(summary);
 
   //output sigma(q_T)
-  sigma(summary, _histDphi, "sigmaDphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
+  sigma(summary, _histdphi, "sigmadphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
   sigma(summary, _histqT, "sigmaqT.pdf", "q_{T}[GeV]", "#sigma(q_{T})[pb]");
   
   //printSummary(summary);
@@ -208,8 +173,8 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }
    
     if(selectQ(pJ, etaJ)){
-      _histDphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
-      _histqT->Fill(qT); _histqTSJA->Fill(PTVecSum(Js[idx[0]], Js[idx[1]]));
+      _histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      _histqT->Fill(qT);
     }
   }
   
