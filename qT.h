@@ -4,12 +4,16 @@
 #include "SampleAnalyzer/Process/Analyzer/AnalyzerBase.h"
 #include "TH1.h"
 
+enum { _g =21, _d = 1, _db = -1,  _u =2, _ub = -2};
+
+
 namespace MA5
 {
 class qT : public AnalyzerBase
 {
   INIT_ANALYSIS(qT,"qT")
 
+  int _initIDs[2];//make sure there are only two initial-state particles.
  public:
   virtual bool Initialize(const MA5::Configuration& cfg, const std::map<std::string,std::string>& parameters);
   virtual void Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& files);
@@ -37,10 +41,15 @@ class qT : public AnalyzerBase
   void cmpWithNorm(const SampleFormat& summary);//compare with the results of the normal mode.
 
   void dsdqT(const SampleFormat& summary);//output dsigma/dq_T
+  void dsdphi(const SampleFormat& summary);//output dsigma/ddphi
   void sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel);//output \int d q_T dsigma/dq_T
 
+  bool chanel();//select a chanel
   
  private:
+  double _aS, _scale;
+  unsigned int _pdfIDA, _pdfIDB;
+
   //Luminosity
   double _L;
   

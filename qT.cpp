@@ -28,7 +28,9 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   setLumi(1e4);
   
   // Initializing histograms
-  _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 0.0, TMath::Pi());//change to small delta phi
+  //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 1000, 0.001, 1.0);//TMath::Pi());//change to small delta phi
+  _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 41, -4.05, 0.05);//TMath::Pi());//change to small delta phi
+  //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 100, 2.141593, 3.131593);//TMath::Pi());//change to small delta phi
   _histdphi->SetStats(kFALSE);
   _histdphi->GetXaxis()->SetTitle("#delta#phi");
   
@@ -36,6 +38,7 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   _histqT->SetStats(kFALSE);
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
 
+  _aS = 0.0; _scale = 0.0; _pdfIDA = 0; _pdfIDB = 0;
   cout << "END   Initialization" << endl;
   return true;
 }
@@ -97,8 +100,31 @@ void qT::dsdqT(const SampleFormat& summary){
   c->SetLeftMargin(0.14);
   //_histDphi->SetFillColor(kRed);
   hqT.Draw("HIST");
+  c->SetGrid();
   c->SetLogy(1);
   c->SaveAs("qT.pdf");
+}
+
+void qT::dsdphi(const SampleFormat& summary){
+  double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*_histdphi->GetBinWidth(1));
+  TH1F hqT = *_histdphi;
+  hqT.GetYaxis()->SetTitle("#frac{d#sigma}{d#delta#phi}[pb]");
+  hqT.SetLineColor(kRed);
+  hqT.Scale(nrm);
+  for(int i=1; i<=hqT.GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*(pow(10.0, _histdphi->GetBinLowEdge(i)+_histdphi->GetBinWidth(i)) - pow(10.0, _histdphi->GetBinLowEdge(i)) ));
+    cout << hqT.GetBinCenter(i) << " " << 2.0*nrm*_histdphi->GetBinContent(i) << endl;
+    //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
+  }
+
+  
+  TCanvas* c = new TCanvas("c","dphi_{T}", 500, 700);
+  c->SetLeftMargin(0.14);
+  //_histDphi->SetFillColor(kRed);
+  hqT.Draw("HIST");
+  c->SetGrid();
+  c->SetLogy(1);
+  c->SaveAs("dsigmaodphi.pdf");
 }
 
 void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel){
@@ -133,11 +159,14 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
 
   //output dsigma/dq_T
   dsdqT(summary);
+  dsdphi(summary);
 
   //output sigma(q_T)
   sigma(summary, _histdphi, "sigmadphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
   sigma(summary, _histqT, "sigmaqT.pdf", "q_{T}[GeV]", "#sigma(q_{T})[pb]");
-  
+
+  cout << "PDFs: " << _pdfIDA << ", " << _pdfIDB << endl;
+  cout << "alpha_s = " << _aS << ", factorization scale = " << _scale << " GeV" << endl;
   //printSummary(summary);
   cout << "END   Finalization" << endl;
 }
@@ -147,16 +176,27 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
 // function called each time one event is read
 // -----------------------------------------------------------------------------
 bool qT::Execute(SampleFormat& sample, const EventFormat& event)
-{
+{//for one event
+  if(_aS!=event.mc()->alphaQCD()) _aS = event.mc()->alphaQCD();
+  if(_scale!=event.mc()->scale()) _scale = event.mc()->scale();
+  if(_pdfIDA!=sample.mc()->beamPDFID().first) _pdfIDA=sample.mc()->beamPDFID().first;
+  if(_pdfIDB!=sample.mc()->beamPDFID().second) _pdfIDB=sample.mc()->beamPDFID().second;
+  
+  //cout << sample.mc()->beamPDFID().second << endl;
   const MCParticleFormat *Js[3]; int iJ = 0;
+  int idxI = 0;
   for (MAuint32 i=0;i<event.mc()->particles().size();i++){
     const MCParticleFormat* part = &event.mc()->particles()[i];
-
-    if (PHYSICS->Id->IsFinalState(*part)){
+    if (PHYSICS->Id->IsInitialState(*part)){
+      _initIDs[idxI] = part->pdgid(); idxI++;
+    }else if (PHYSICS->Id->IsFinalState(*part)){
       Js[iJ] = part;
       iJ++;
     }
   }
+
+  if(chanel()){
+  if(idxI!=2) cout << "There are " << idxI << " initial-state particles?" << endl;
   if(iJ!=3){
     cout << "There are " << iJ << " final-state particles?" << endl;
   }else{
@@ -173,9 +213,12 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }
    
     if(selectQ(pJ, etaJ)){
-      _histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      _histdphi->Fill(log10(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]])));
+      //_histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      //_histdphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
       _histqT->Fill(qT);
     }
+  }
   }
   
   return true;
@@ -253,4 +296,8 @@ void qT::setInitAll(){
 void qT::setInitPartons(int iA, int iB){
   _iA = iA; _iB = iB;
   _initPartonsQ = true;
+}
+
+bool qT::chanel(){
+  return ((_initIDs[0]==_u&&_initIDs[1]==_d)||(_initIDs[1]==_u&&_initIDs[0]==_d));
 }
