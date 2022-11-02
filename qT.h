@@ -13,7 +13,6 @@ class qT : public AnalyzerBase
 {
   INIT_ANALYSIS(qT,"qT")
 
-  int _initIDs[2];//make sure there are only two initial-state particles.
  public:
   virtual bool Initialize(const MA5::Configuration& cfg, const std::map<std::string,std::string>& parameters);
   virtual void Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& files);
@@ -44,11 +43,17 @@ class qT : public AnalyzerBase
   void dsdphi(const SampleFormat& summary);//output dsigma/ddphi
   void sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel);//output \int d q_T dsigma/dq_T
 
-  bool chanel();//select a chanel
+  bool chanelud();//select a chanel
+  bool chanelgg2ggg();//select a chanel
+  bool chanelall(){return true;};//no constrain
   
  private:
   double _aS, _scale;
   unsigned int _pdfIDA, _pdfIDB;
+
+  //make selections
+  int _initIDs[2];//make sure there are only two initial-state particles.
+  int _finalIDs[3];
 
   //Luminosity
   double _L;
@@ -63,6 +68,7 @@ class qT : public AnalyzerBase
   int _iA, _iB;//PDG id for the two initial partons
   
   TH1F *_histdphi;//Delta phi histogram
+  TH1F *_histldphi;//Delta log10(dphi) histogram
   TH1F *_histqT;//qT histogram
 
   void SortpT(const MCParticleFormat**, int *idx);

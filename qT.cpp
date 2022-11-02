@@ -28,8 +28,8 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   setLumi(1e4);
   
   // Initializing histograms
-  //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 1000, 0.001, 1.0);//TMath::Pi());//change to small delta phi
-  _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 41, -4.05, 0.05);//TMath::Pi());//change to small delta phi
+  _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 1e-4, 1e-2);//TMath::Pi());//change to small delta phi
+  _histldphi = new TH1F("#delta#phi", "#delta#phi_{12}", 21, -4.1, 0.1);//TMath::Pi());//change to small delta phi
   //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 100, 2.141593, 3.131593);//TMath::Pi());//change to small delta phi
   _histdphi->SetStats(kFALSE);
   _histdphi->GetXaxis()->SetTitle("#delta#phi");
@@ -112,9 +112,12 @@ void qT::dsdphi(const SampleFormat& summary){
   hqT.SetLineColor(kRed);
   hqT.Scale(nrm);
   for(int i=1; i<=hqT.GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
-    nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*(pow(10.0, _histdphi->GetBinLowEdge(i)+_histdphi->GetBinWidth(i)) - pow(10.0, _histdphi->GetBinLowEdge(i)) ));
-    cout << hqT.GetBinCenter(i) << " " << 2.0*nrm*_histdphi->GetBinContent(i) << endl;
-    //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
+    cout << hqT.GetBinCenter(i) << " " << hqT.GetBinContent(i) << endl;
+  }  
+  cout << endl;
+  for(int i=1; i<=_histldphi->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*(pow(10.0, _histldphi->GetBinLowEdge(i)+_histldphi->GetBinWidth(i)) - pow(10.0, _histldphi->GetBinLowEdge(i)) ));
+    cout << _histldphi->GetBinCenter(i) << " " << nrm*_histldphi->GetBinContent(i) << endl;
   }
 
   
@@ -187,15 +190,16 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
   int idxI = 0;
   for (MAuint32 i=0;i<event.mc()->particles().size();i++){
     const MCParticleFormat* part = &event.mc()->particles()[i];
+    if(part->pdgid()==9) cout << "Warning: pdg id = 9 for gluons!" << endl;
     if (PHYSICS->Id->IsInitialState(*part)){
       _initIDs[idxI] = part->pdgid(); idxI++;
     }else if (PHYSICS->Id->IsFinalState(*part)){
-      Js[iJ] = part;
+      Js[iJ] = part; _finalIDs[iJ] = part->pdgid(); 
       iJ++;
     }
   }
 
-  if(chanel()){
+  if(chanelud()){
   if(idxI!=2) cout << "There are " << idxI << " initial-state particles?" << endl;
   if(iJ!=3){
     cout << "There are " << iJ << " final-state particles?" << endl;
@@ -213,8 +217,8 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }
    
     if(selectQ(pJ, etaJ)){
-      _histdphi->Fill(log10(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]])));
-      //_histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
+      _histldphi->Fill(log10(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]])));
+      _histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
       //_histdphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
       _histqT->Fill(qT);
     }
@@ -298,6 +302,10 @@ void qT::setInitPartons(int iA, int iB){
   _initPartonsQ = true;
 }
 
-bool qT::chanel(){
+bool qT::chanelud(){
   return ((_initIDs[0]==_u&&_initIDs[1]==_d)||(_initIDs[1]==_u&&_initIDs[0]==_d));
+}
+
+bool qT::chanelgg2ggg(){
+  return (_initIDs[0]==_g&&_initIDs[1]==_g&&_finalIDs[0]==_g&&_finalIDs[1]==_g&&_finalIDs[2]==_g);
 }
