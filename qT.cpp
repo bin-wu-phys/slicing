@@ -204,15 +204,17 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     int idx[3];
     SortpT(Js, idx);
 
-    double pJ, etaJ, qT;
+    double pJ, etaJ, qT, pJ2, etaJ2;
     if(InJetQ(Js[idx[1]], Js[idx[2]])){
-      pJ = Js[idx[1]]->pt() + Js[idx[2]]->pt();
-      etaJ = Js[idx[1]]->eta(); qT = qTInJet(Js[idx[0]]->pt(), Js[idx[1]]->pt(), Js[idx[2]]->pt());
+      pJ = Js[idx[1]]->pt() + Js[idx[2]]->pt(); etaJ = Js[idx[1]]->eta();
+      pJ2 = Js[idx[0]]->pt(); etaJ2 = Js[idx[0]]->eta();
+      qT = qTInJet(Js[idx[0]]->pt(), Js[idx[1]]->pt(), Js[idx[2]]->pt());
     }else{
       pJ = Js[idx[0]]->pt(); etaJ = Js[idx[0]]->eta(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
+      pJ2 = Js[idx[1]]->pt(); etaJ2 = Js[idx[1]]->eta();
     }
    
-    if(selectQ(pJ, etaJ)){
+    if(selectQ(pJ, etaJ)&&selectQ(pJ2, etaJ2)){
       _histdphi->Fill(log10(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]])));
       //_histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
       //_histdphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
