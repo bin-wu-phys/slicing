@@ -23,6 +23,7 @@ class qT : public AnalyzerBase
 
 
   double PTVecSum(const MCParticleFormat*, const MCParticleFormat*);//the modulus of the total pT of two particles
+  double rapidity(const MCParticleFormat*, const MCParticleFormat*);//the modulus of the total pT of two particles
 
   double qTInJet(double, double, double);//In jet qT
 
@@ -48,7 +49,8 @@ class qT : public AnalyzerBase
   bool chanelgg2ggg();//select a chanel
   bool chanelall(){return true;};//no constrain
   bool setCut(double *pJ, double *etaJ, unsigned int nJ);
-  
+
+  void sigtot(const SampleFormat& summary);
  private:
   double _aS, _scale;
   unsigned int _pdfIDA, _pdfIDB;
@@ -87,7 +89,7 @@ class qT : public AnalyzerBase
   bool InJetQ(const MCParticleFormat*, const MCParticleFormat*);//test whether j2 and j3 in the same jet
 
   //total cross section
-  double sigWTA, sigSJA;
+  double _sigWTA, _sigSJA;
 };
 }
 

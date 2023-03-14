@@ -54,7 +54,7 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
   _aS = 0.0; _scale = 0.0; _pdfIDA = 0; _pdfIDB = 0;
 
   //total cross section
-  sigWTA = 0.0; sigSJA = 0.0;
+  _sigWTA = 0.0; _sigSJA = 0.0;
   
   cout << "END   Initialization" << endl;
   return true;
@@ -206,6 +206,13 @@ void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const
   c->SaveAs(fname);
 }
 
+
+void qT::sigtot(const SampleFormat& summary){
+  double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents()));
+  _sigWTA *= nrm; _sigSJA *= nrm;
+  cout << "/nTotal cross section WTA = " << _sigWTA << " pb, SJA = " << _sigSJA << " pb" << ", WTA - SJA = " << _sigWTA - _sigSJA << " pb" << endl;
+}
+
 void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& files)
 {
   cout << "BEGIN Finalization" << endl;
@@ -232,6 +239,8 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   cout << "PDFs: " << _pdfIDA << ", " << _pdfIDB << endl;
   cout << "alpha_s = " << _aS << ", factorization scale = " << _scale << " GeV" << endl;
   //printSummary(summary);
+
+  sigtot(summary);
   cout << "END   Finalization" << endl;
 }
 
@@ -270,7 +279,7 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     int idx[3];
     SortpT(Js, idx);
 
-    double pJ[3], etaJ[3], pJSJA[3], etaJSTA[3], qT, qTSJA=0.0;
+    double pJ[3], etaJ[3], pJSJA[3], etaJSJA[3], qT, qTSJA=0.0;
     unsigned int nJ;
     bool injet = InJetQ(Js[idx[1]], Js[idx[2]]);
     if(injet){
@@ -281,8 +290,8 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
       qT = qTInJet(Js[idx[0]]->pt(), Js[idx[1]]->pt(), Js[idx[2]]->pt());
       
       //SJA
-      pJSJA[0] = Js[idx[0]]->pt(); etaJ[0] = Js[idx[0]]->eta();
-      pJSJA[1] = Js[idx[0]]->pt(); etaJ[1] = Js[idx[0]]->eta();      
+      pJSJA[0] = Js[idx[0]]->pt(); etaJSJA[0] = Js[idx[0]]->eta();
+      pJSJA[1] =  pJSJA[0]; etaJSJA[1] = rapidity(Js[idx[1]], Js[idx[2]]);      
       qTSJA=0.0;
       
     }else{
@@ -299,7 +308,7 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
       
       qTSJA = Js[idx[2]]->pt(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
     }
-   
+    
     if(setCut(pJ, etaJ, nJ)){
       //if(selectpTQ(pJ2)&&selectetaQ(etaJ)&&selectetaQ(etaJ2)){
       double Dphi = DeltaPhi(Js[idx[0]], Js[idx[1]]);
@@ -307,6 +316,27 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
       _histdphi->Fill(TMath::Pi()-Dphi);
       _histDphi->Fill(Dphi);
       _histqT->Fill(qT);
+      /*
+      //SJA: only if j2, j3 are not in the same jet, qT>0
+      if(!injet){
+	_histldphiS->Fill(log10(TMath::Pi()-Dphi));
+	_histdphiS->Fill(TMath::Pi()-Dphi);
+	_histDphiS->Fill(Dphi);
+      }
+      _histqTSJA->Fill(qTSJA);
+      */
+      _sigWTA += 1.0;
+    }
+   
+    if(setCut(pJSJA, etaJSJA, nJ)){
+      //if(selectpTQ(pJ2)&&selectetaQ(etaJ)&&selectetaQ(etaJ2)){
+      double Dphi = DeltaPhi(Js[idx[0]], Js[idx[1]]);
+      /*
+      _histldphi->Fill(log10(TMath::Pi()-Dphi));
+      _histdphi->Fill(TMath::Pi()-Dphi);
+      _histDphi->Fill(Dphi);
+      _histqT->Fill(qT);
+      */
       //SJA: only if j2, j3 are not in the same jet, qT>0
       if(!injet){
 	_histldphiS->Fill(log10(TMath::Pi()-Dphi));
@@ -315,7 +345,7 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
       }
       _histqTSJA->Fill(qTSJA);
 
-      _numSelected++;
+      _sigSJA += 1.0;
     }
   }
   }
@@ -353,6 +383,12 @@ double qT::DeltaR(const MCParticleFormat* p1, const MCParticleFormat* p2){
 double qT::PTVecSum(const MCParticleFormat* p1, const MCParticleFormat* p2){
   double dpx = p1->px()+p2->px(), dpy = p1->py()+p2->py();
   return sqrt(dpx*dpx + dpy*dpy);
+}
+
+double qT::rapidity(const MCParticleFormat* p1, const MCParticleFormat* p2){
+  double px = p1->px()+p2->px(), py = p1->py()+p2->py(), pz = p1->pz()+p2->pz();
+  double p = sqrt(px*px + py*py + pz*pz);
+  return 0.5*log((p+pz)/(p-pz));
 }
 
 double qT::qTInJet(double p1, double p2, double p3){
