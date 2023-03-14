@@ -26,19 +26,36 @@ bool qT::Initialize(const MA5::Configuration& cfg, const std::map<std::string,st
 
   //initialize Luminisity
   setLumi(1e4);
+
+  //reset # of events
+  _numEvents = 0; _numSelected = 0;
   
   // Initializing histograms
+  _histDphi = new TH1F("#Delta#phi", "#Delta#phi_{12}", 50, 2.10, 3.14);//TMath::Pi());//change to sma
   _histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 50, 1e-4, 1e-2);//TMath::Pi());//change to small delta phi
-  _histldphi = new TH1F("#delta#phi", "#delta#phi_{12}", 21, -4.1, 0.1);//TMath::Pi());//change to small delta phi
+  _histldphi = new TH1F("#delta#phi", "#delta#phi_{12}", 41, -4.05, 0.05);//TMath::Pi());//change to small delta phi
   //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 100, 2.141593, 3.131593);//TMath::Pi());//change to small delta phi
   _histdphi->SetStats(kFALSE);
   _histdphi->GetXaxis()->SetTitle("#delta#phi");
-  
+
+  _histDphiS = new TH1F("#Delta#phi in SJA", "#Delta#phi_{12}", 50, 2.10, 3.14);//TMath::Pi());//change to sma
+  _histdphiS = new TH1F("#delta#phi in SJA", "#delta#phi_{12}", 50, 1e-4, 1e-2);//TMath::Pi());//change to small delta phi
+  _histldphiS = new TH1F("#delta#phi in SJA", "#delta#phi_{12}", 41, -4.05, 0.05);//TMath::Pi());//change to small delta phi
+  //_histdphi = new TH1F("#delta#phi", "#delta#phi_{12}", 100, 2.141593, 3.131593);//TMath::Pi());//change to small delta phi
+
   _histqT = new TH1F("q_{T}", "q_{T} in WTA", 50, 5.0, 100);
   _histqT->SetStats(kFALSE);
   _histqT->GetXaxis()->SetTitle("q_{T}[GeV]");
 
+  _histqTSJA = new TH1F("q_{T}", "q_{T} in SJA", 50, 5.0, 100);
+  _histqTSJA->SetStats(kFALSE);
+  _histqTSJA->GetXaxis()->SetTitle("q_{T}[GeV]");
+
   _aS = 0.0; _scale = 0.0; _pdfIDA = 0; _pdfIDB = 0;
+
+  //total cross section
+  sigWTA = 0.0; sigSJA = 0.0;
+  
   cout << "END   Initialization" << endl;
   return true;
 }
@@ -62,19 +79,36 @@ void qT::cmpWithNorm(const SampleFormat& summary){
 
   TGraph g;
 
-  TH1F* S1_DPHI_0_PI_0 = new TH1F("S1_DPHI_0_PI_0","S1_DPHI_0_PI_0",50,0.0,3.141593);
-  DphiNormal(S1_DPHI_0_PI_0);
+  TH1F* S1_DPHI_0_PI_0 = new TH1F("S1_DPHI_0_PI_0","S1_DPHI_0_PI_0", 50, 2.10, 3.14);
+  TH1F* S1_DPHI_0_PI_0_S = new TH1F("S1_DPHI_0_PI_0 in SJA","S1_DPHI_0_PI_0", 50, 2.10, 3.14);
+  DphiNormal(S1_DPHI_0_PI_0); DphiSJANormal(S1_DPHI_0_PI_0_S);
 
-  for(int i=1; i<=_histdphi->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
-    double Dp = TMath::Pi()-_histdphi->GetBinCenter(i);
-    double Dn = nrm*_histdphi->GetBinContent(i)-S1_DPHI_0_PI_0->GetBinContent(_histdphi->GetNbinsX()+1-i);
-    g.AddPoint(Dp, Dn);
-    cout << Dp << " " << nrm*_histdphi->GetBinContent(i) << " " <<  Dn;
-    if(_histdphi->GetBinContent(i)!=0.0)
-      cout << " " << Dn/(nrm*_histdphi->GetBinContent(i));
+  cout << "Dphi using WTA:" << endl;
+  for(int i=1; i<=_histDphi->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    double Dp = _histDphi->GetBinCenter(i);
+    double Dn = nrm*_histDphi->GetBinContent(i)-S1_DPHI_0_PI_0->GetBinContent(i);//S1_DPHI_0_PI_0->GetBinContent(_histdphi->GetNbinsX()+1-i);
+    if( nrm*_histDphi->GetBinContent(i)!=0.0)
+      g.AddPoint(Dp, Dn/(nrm*_histDphi->GetBinContent(i)));
+    cout << Dp << " " << S1_DPHI_0_PI_0->GetBinCenter(i);
+    cout << " " << nrm*_histDphi->GetBinContent(i) << " " <<  S1_DPHI_0_PI_0->GetBinContent(i) << " " <<  Dn;
+    if(_histDphi->GetBinContent(i)!=0.0)
+      cout << " " << Dn/(nrm*_histDphi->GetBinContent(i));
     cout << endl;
   }
-  
+
+  cout << "Dphi using SJA:" << endl;
+  for(int i=1; i<=_histDphiS->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    double Dp = _histDphiS->GetBinCenter(i);
+    double Dn = nrm*_histDphiS->GetBinContent(i)-S1_DPHI_0_PI_0_S->GetBinContent(i);//S1_DPHI_0_PI_0->GetBinContent(_histdphi->GetNbinsX()+1-i);
+    if( nrm*_histDphiS->GetBinContent(i)!=0.0)
+      g.AddPoint(Dp, Dn/(nrm*_histDphiS->GetBinContent(i)));
+    cout << Dp << " " << S1_DPHI_0_PI_0_S->GetBinCenter(i);
+    cout << " " << nrm*_histDphiS->GetBinContent(i) << " " <<  S1_DPHI_0_PI_0_S->GetBinContent(i) << " " <<  Dn;
+    if(_histDphiS->GetBinContent(i)!=0.0)
+      cout << " " << Dn/(nrm*_histDphiS->GetBinContent(i));
+    cout << endl;
+  }
+
   g.GetYaxis()->SetTitle("Events  ( L_{int} = 10 fb^{-1} )");
   g.GetXaxis()->SetTitle("#Delta#phi");
   
@@ -85,24 +119,38 @@ void qT::cmpWithNorm(const SampleFormat& summary){
   g.Draw("AP");
   c1->SaveAs("Dphi.pdf");
 
+  cout << endl;
+  
 }
 
 void qT::dsdqT(const SampleFormat& summary){
   double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*_histqT->GetBinWidth(1));
   TH1F hqT = *_histqT;
+  TH1F hqTS = *_histqTSJA;
+  TH1F *hqTSJA =  new TH1F("S1_PT_0","S1_PT_0",50,5.0,100.0);
+  qTSJA(hqTSJA);//read from standard mode results
+  
   hqT.GetYaxis()->SetTitle("#frac{d#sigma}{dq_{T}}[pb#bulletGeV^{-1}]");
   hqT.SetLineColor(kRed);
-  hqT.Scale(nrm);
+  hqT.Scale(nrm); hqTS.Scale(nrm);
 
+  cout << endl;
   cout << _histqT << " vs " << &hqT << endl;
   
   TCanvas* c = new TCanvas("c","q_{T}", 500, 700);
   c->SetLeftMargin(0.14);
   //_histDphi->SetFillColor(kRed);
   hqT.Draw("HIST");
+  hqTSJA->Draw("SAME");
   c->SetGrid();
   c->SetLogy(1);
   c->SaveAs("qT.pdf");
+
+  for(int i=1; i<=hqT.GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
+    cout << hqT.GetBinCenter(i) << " " << hqT.GetBinContent(i) << " " << 1e-4*hqTSJA->GetBinContent(i)/hqTSJA->GetBinWidth(i) << " " << hqTS.GetBinContent(i) << endl;
+  }
+
+  cout << endl;
 }
 
 void qT::dsdphi(const SampleFormat& summary){
@@ -115,9 +163,11 @@ void qT::dsdphi(const SampleFormat& summary){
     cout << hqT.GetBinCenter(i) << " " << hqT.GetBinContent(i) << endl;
   }  
   cout << endl;
+  cout << "#{log(dphi), dsig/ddphi}" << endl;
+  cout << "# of events: " << summary.nevents() << endl;
   for(int i=1; i<=_histldphi->GetNbinsX(); i++){//constrained to [1, GetNbinsX()]
     nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents())*(pow(10.0, _histldphi->GetBinLowEdge(i)+_histldphi->GetBinWidth(i)) - pow(10.0, _histldphi->GetBinLowEdge(i)) ));
-    cout << _histldphi->GetBinCenter(i) << " " << nrm*_histldphi->GetBinContent(i) << endl;
+    cout << _histldphi->GetBinCenter(i) << " " << nrm*_histldphi->GetBinContent(i)  << " " << nrm*_histldphiS->GetBinContent(i) << endl;
   }
 
   
@@ -132,17 +182,20 @@ void qT::dsdphi(const SampleFormat& summary){
 
 void qT::sigma(const SampleFormat& summary, TH1F* hist, const char* fname, const char* xlabel, const char* ylabel){
   double nrm = summary.mc()->xsection()/(static_cast<float>(summary.nevents()));
+  cout << "Total # of events: " << summary.nevents() << " vs _numEvents: " << _numEvents << endl;
   
   //check the total number
   int numBin = hist->GetNbinsX()+1;
   TGraph g;
 
   double sig = nrm*hist->GetBinContent(numBin);
+  int chk_num = hist->GetBinContent(numBin);
   for(int i=hist->GetNbinsX(); i>0; i--){//constrained to [1, GetNbinsX()]
-    sig += nrm*hist->GetBinContent(i);
-    g.AddPoint(hist->GetBinCenter(i), sig);
-    //cout << _histqT->GetBinCenter(i) << " " << sig << endl;
+    sig += nrm*hist->GetBinContent(i); chk_num += hist->GetBinContent(i);
+    g.AddPoint(hist->GetBinLowEdge(i), sig);
+    cout << hist->GetBinLowEdge(i) << " " << sig << endl;
   }
+  cout << "Recounted # = " << chk_num + hist->GetBinContent(0) << " vs " << _numSelected << endl;
   TCanvas* c = new TCanvas("","#sigma", 500, 700);
   c->SetLeftMargin(0.14);
   //_histDphi->SetFillColor(kRed);
@@ -160,13 +213,21 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
   //compared with the normal mode
   cmpWithNorm(summary);
 
+  
   //output dsigma/dq_T
   dsdqT(summary);
   dsdphi(summary);
 
   //output sigma(q_T)
-  sigma(summary, _histdphi, "sigmadphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
-  sigma(summary, _histqT, "sigmaqT.pdf", "q_{T}[GeV]", "#sigma(q_{T})[pb]");
+  //cout << "#{log10(dphi), sigma[pb]}" << endl;
+  //sigma(summary, _histldphi, "sigmadphi.pdf", "log(#delta#phi)", "#sigma(#delta#phi)[pb]");
+
+  //cout << "#{dphi, sigma[pb]}" << endl;
+  //sigma(summary, _histdphi, "sigmadphi.pdf", "#delta#phi", "#sigma(#delta#phi)[pb]");
+
+  //cout << "#{qT, sigma[pb]}" << endl;
+  //sigma(summary, _histqT, "sigmaqT.pdf", "q_{T}[GeV]", "#sigma(q_{T})[pb]");
+  
 
   cout << "PDFs: " << _pdfIDA << ", " << _pdfIDB << endl;
   cout << "alpha_s = " << _aS << ", factorization scale = " << _scale << " GeV" << endl;
@@ -180,6 +241,7 @@ void qT::Finalize(const SampleFormat& summary, const std::vector<SampleFormat>& 
 // -----------------------------------------------------------------------------
 bool qT::Execute(SampleFormat& sample, const EventFormat& event)
 {//for one event
+  _numEvents++;
   if(_aS!=event.mc()->alphaQCD()) _aS = event.mc()->alphaQCD();
   if(_scale!=event.mc()->scale()) _scale = event.mc()->scale();
   if(_pdfIDA!=sample.mc()->beamPDFID().first) _pdfIDA=sample.mc()->beamPDFID().first;
@@ -199,7 +261,7 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     }
   }
 
-  if(chanelud()){
+  if(chanelgg2ggg()){
   if(idxI!=2) cout << "There are " << idxI << " initial-state particles?" << endl;
   if(iJ!=3){
     cout << "There are " << iJ << " final-state particles?" << endl;
@@ -208,21 +270,52 @@ bool qT::Execute(SampleFormat& sample, const EventFormat& event)
     int idx[3];
     SortpT(Js, idx);
 
-    double pJ, etaJ, qT, pJ2, etaJ2;
-    if(InJetQ(Js[idx[1]], Js[idx[2]])){
-      pJ = Js[idx[1]]->pt() + Js[idx[2]]->pt(); etaJ = Js[idx[1]]->eta();
-      pJ2 = Js[idx[0]]->pt(); etaJ2 = Js[idx[0]]->eta();
+    double pJ[3], etaJ[3], pJSJA[3], etaJSTA[3], qT, qTSJA=0.0;
+    unsigned int nJ;
+    bool injet = InJetQ(Js[idx[1]], Js[idx[2]]);
+    if(injet){
+      nJ = 2;
+      //WTA
+      pJ[0] = Js[idx[1]]->pt() + Js[idx[2]]->pt(); etaJ[0] = Js[idx[1]]->eta();
+      pJ[1] = Js[idx[0]]->pt(); etaJ[1] = Js[idx[0]]->eta();
       qT = qTInJet(Js[idx[0]]->pt(), Js[idx[1]]->pt(), Js[idx[2]]->pt());
+      
+      //SJA
+      pJSJA[0] = Js[idx[0]]->pt(); etaJ[0] = Js[idx[0]]->eta();
+      pJSJA[1] = Js[idx[0]]->pt(); etaJ[1] = Js[idx[0]]->eta();      
+      qTSJA=0.0;
+      
     }else{
-      pJ = Js[idx[0]]->pt(); etaJ = Js[idx[0]]->eta(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
+      nJ = 3;
+
+      for(unsigned int i=0; i<nJ; i++){
+	pJ[i] = Js[idx[i]]->pt(); etaJ[i] = Js[idx[i]]->eta();
+	pJSJA[i] = pJ[i]; etaJSJA[i] = etaJ[i];
+      }
+      /*
+      pJ = Js[idx[0]]->pt(); etaJ = Js[idx[0]]->eta(); 
       pJ2 = Js[idx[1]]->pt(); etaJ2 = Js[idx[1]]->eta();
+      */
+      
+      qTSJA = Js[idx[2]]->pt(); qT = PTVecSum(Js[idx[0]], Js[idx[1]]);
     }
    
-    if(selectQ(pJ, etaJ)&&selectQ(pJ2, etaJ2)){
-      _histldphi->Fill(log10(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]])));
-      _histdphi->Fill(TMath::Pi()-DeltaPhi(Js[idx[0]], Js[idx[1]]));
-      //_histdphi->Fill(DeltaPhi(Js[idx[0]], Js[idx[1]]));
+    if(setCut(pJ, etaJ, nJ)){
+      //if(selectpTQ(pJ2)&&selectetaQ(etaJ)&&selectetaQ(etaJ2)){
+      double Dphi = DeltaPhi(Js[idx[0]], Js[idx[1]]);
+      _histldphi->Fill(log10(TMath::Pi()-Dphi));
+      _histdphi->Fill(TMath::Pi()-Dphi);
+      _histDphi->Fill(Dphi);
       _histqT->Fill(qT);
+      //SJA: only if j2, j3 are not in the same jet, qT>0
+      if(!injet){
+	_histldphiS->Fill(log10(TMath::Pi()-Dphi));
+	_histdphiS->Fill(TMath::Pi()-Dphi);
+	_histDphiS->Fill(Dphi);
+      }
+      _histqTSJA->Fill(qTSJA);
+
+      _numSelected++;
     }
   }
   }
@@ -283,10 +376,18 @@ bool qT::InJetQ(const MCParticleFormat* p2, const MCParticleFormat* p3){
   return Q;
 }
 
-bool qT::selectQ(double pJ, double etaJ){
+bool qT::selectpTQ(double pJ){
   bool Q = false;
   
-  if((pJ > _pTJMin)&&(etaJ > -_etaMax)&&(etaJ < _etaMax)) Q = true;
+  if(pJ > _pTJMin) Q = true;
+
+  return Q;
+}
+
+bool qT::selectetaQ(double etaJ){
+  bool Q = false;
+  
+  if((etaJ > -_etaMax)&&(etaJ < _etaMax)) Q = true;
 
   return Q;
 }
@@ -310,4 +411,13 @@ bool qT::chanelud(){
 
 bool qT::chanelgg2ggg(){
   return (_initIDs[0]==_g&&_initIDs[1]==_g&&_finalIDs[0]==_g&&_finalIDs[1]==_g&&_finalIDs[2]==_g);
+}
+
+bool qT::setCut(double *pJ, double *etaJ, unsigned int nJ){
+  bool cut = true;
+  for(unsigned int i=0; i<nJ; i++){
+    cut = cut&&selectpTQ(pJ[i])&&selectetaQ(etaJ[i]);
+  }
+  
+  return cut;
 }

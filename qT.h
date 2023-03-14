@@ -26,7 +26,8 @@ class qT : public AnalyzerBase
 
   double qTInJet(double, double, double);//In jet qT
 
-  bool selectQ(double pJ, double etaJ);//test selected kinetics.
+  bool selectetaQ(double etaJ);//test selected kinetics.
+  bool selectpTQ(double pJ);//test selected kinetics.
 
   void setParas(double, double, double);//set parameters _R, _etaMax, _pTJMin
 
@@ -46,6 +47,7 @@ class qT : public AnalyzerBase
   bool chanelud();//select a chanel
   bool chanelgg2ggg();//select a chanel
   bool chanelall(){return true;};//no constrain
+  bool setCut(double *pJ, double *etaJ, unsigned int nJ);
   
  private:
   double _aS, _scale;
@@ -57,6 +59,9 @@ class qT : public AnalyzerBase
 
   //Luminosity
   double _L;
+
+  //count total # of events: just want to compare with that in the summary
+  unsigned _numEvents, _numSelected;
   
   //parameters
   double _R; //jet radius
@@ -67,13 +72,22 @@ class qT : public AnalyzerBase
   bool _initPartonsQ;//pick a pair of initial partons?
   int _iA, _iB;//PDG id for the two initial partons
   
-  TH1F *_histdphi;//Delta phi histogram
-  TH1F *_histldphi;//Delta log10(dphi) histogram
-  TH1F *_histqT;//qT histogram
+  TH1F *_histDphi;//Delta phi histogram
+  TH1F *_histdphi;//delta phi histogram
+  TH1F *_histldphi;//log10(dphi) histogram
+  TH1F *_histDphiS;//Delta phi histogram with SJA
+  TH1F *_histdphiS;//delta phi histogram with SJA
+  TH1F *_histldphiS;//log10(dphi) histogram with SJA
+
+  TH1F *_histqT;//qT histogram using WTA
+  TH1F *_histqTSJA;//qT histogram
 
   void SortpT(const MCParticleFormat**, int *idx);
 
   bool InJetQ(const MCParticleFormat*, const MCParticleFormat*);//test whether j2 and j3 in the same jet
+
+  //total cross section
+  double sigWTA, sigSJA;
 };
 }
 
